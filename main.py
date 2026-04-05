@@ -17,7 +17,7 @@ DARK_GRAY_UI = (45, 45, 45)
 # --- CONFIGURACIÓN JUGADOR ---
 SPRITE_ANCHO_BASE = 64  
 SPRITE_ALTO_BASE = 64
-# ¡AQUÍ ESTÁ LA MAGIA! Lo cambiamos a 2. Tu personaje ahora será del doble de tamaño visualmente, 
+#Lo cambiamos a 2. el personaje ahora será del doble de tamaño visualmente, 
 # pero el recorte de 64x64 original se mantiene intacto.
 FACTOR_ESCALA_JUGADOR = 2 
 SPRITE_ANCHO_JUEGO = SPRITE_ANCHO_BASE * FACTOR_ESCALA_JUGADOR
@@ -38,7 +38,7 @@ TILE_ALTO = 64
 # --- CONFIGURACIÓN ÁRBOL ---
 FRAME_ARBOL_ANCHO = 64  
 FRAMES_ANIMACION_ARBOL = 4      # Cuántos cuadros queremos que se muevan en el juego
-TOTAL_FILAS_SPRITESHEET = 13    # <-- ¡EL DATO CLAVE! La imagen tiene 13 árboles hacia abajo
+TOTAL_FILAS_SPRITESHEET = 13    # <La imagen tiene 13 árboles hacia abajo
 VELOCIDAD_ANIMACION_ARBOL = 0.05
 
 # ==========================================
@@ -185,18 +185,6 @@ class Arbol:
     def draw(self, pantalla):
         pantalla.blit(self.image, (self.x, self.y))
 
-    def update(self):
-        self.animation_timer += VELOCIDAD_ANIMACION_ARBOL
-        if self.animation_timer >= 1:
-            self.animation_timer = 0
-            self.frame_index += 1
-            if self.frame_index >= len(self.frames):
-                self.frame_index = 0
-            self.image = self.frames[self.frame_index]
-
-    def draw(self, pantalla):
-        pantalla.blit(self.image, (self.x, self.y))
-
 # ==========================================
 # 4. CLASE JUGADOR 
 # ==========================================
@@ -318,10 +306,18 @@ def main():
     ]
     
     arboles = [
-        Arbol(hoja_arboles, 250, 200, 0), 
-        Arbol(hoja_arboles, 400, 300, 3), 
-        # A esta instancia en específico le decimos que tome 96 píxeles de ancho
-        Arbol(hoja_arboles, 550, 200, 6, ancho_override=96)  
+    Arbol(hoja_arboles, 50,  80,  0),
+    Arbol(hoja_arboles, 150, 200, 1),
+    Arbol(hoja_arboles, 300, 100, 2),
+    Arbol(hoja_arboles, 420, 250, 3),
+    Arbol(hoja_arboles, 550, 150, 4),
+    Arbol(hoja_arboles, 650, 300, 0),
+    Arbol(hoja_arboles, 100, 350, 2),
+    Arbol(hoja_arboles, 700, 100, 1),
+    Arbol(hoja_arboles, 350, 380, 3),
+    Arbol(hoja_arboles, 400, 150, 4),
+    Arbol(hoja_arboles, 800, 250, 0),
+
     ]
     
     corriendo = True
