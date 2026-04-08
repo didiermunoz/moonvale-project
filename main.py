@@ -7,9 +7,26 @@ import os
 # ==========================================
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(BASE_DIR, "Assets")
+if not os.path.isdir(ASSETS_DIR):
+    # Fallback for projects that use lowercase folder names.
+    ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+
+
+def asset_path(filename):
+    return os.path.join(ASSETS_DIR, filename)
+
 ANCHO_PANTALLA = 800
 ALTO_PANTALLA = 600
 FPS = 60
+ALTO_UI = 100
+ALTO_JUEGO = ALTO_PANTALLA - ALTO_UI
+
+# Zoom de cámara: mayor valor = más cerca del jugador (se ve menos mapa).
+CAMARA_ZOOM = 1.35
+CAMARA_VISTA_ANCHO = int(ANCHO_PANTALLA / CAMARA_ZOOM)
+CAMARA_VISTA_ALTO = int(ALTO_JUEGO / CAMARA_ZOOM)
 
 PASTEL_SKY_BLUE = (173, 216, 230) 
 DARK_GRAY_UI = (45, 45, 45)
@@ -34,6 +51,8 @@ DIR_ARRIBA = 3
 # --- CONFIGURACIÓN MAPA ---
 TILE_ANCHO = 64
 TILE_ALTO = 64
+MAPA_ANCHO = 20
+MAPA_ALTO = 20
 
 # --- CONFIGURACIÓN ÁRBOL ---
 FRAME_ARBOL_ANCHO = 64  
@@ -99,8 +118,8 @@ class Granja:
     def __init__(self, ancho, alto, hoja_tiles):
         self.ancho = ancho
         self.alto = alto
-        self.columnas_pantalla = (ANCHO_PANTALLA // TILE_ANCHO) + 1
-        self.filas_pantalla = ((ALTO_PANTALLA - 100) // TILE_ALTO) + 1
+        self.ancho_px = ancho * TILE_ANCHO
+        self.alto_px = alto * TILE_ALTO
         
         self.tile_base = obtiene_tile(hoja_tiles, 0, 0, TILE_ANCHO, TILE_ALTO)
         self.tile_regado = obtiene_tile(hoja_tiles, 1, 0, TILE_ANCHO, TILE_ALTO)
@@ -120,15 +139,53 @@ class Granja:
         self.regar_en_cadena(x, y + 1, nivel_carga - 1)
         self.regar_en_cadena(x, y - 1, nivel_carga - 1)
 
-    def draw(self, pantalla):
-        for col in range(self.columnas_pantalla):
-            for fila in range(self.filas_pantalla):
-                pantalla.blit(self.tile_base, (col * TILE_ANCHO, fila * TILE_ALTO))
-        
+    def draw(self, superficie, cam_x, cam_y):
+        # 1) Terreno base repetido para que nunca se vea fondo vacío al mover la cámara.
+        start_col = (cam_x // TILE_ANCHO) - 1
+        end_col = ((cam_x + CAMARA_VISTA_ANCHO) // TILE_ANCHO) + 1
+        start_row = (cam_y // TILE_ALTO) - 1
+        end_row = ((cam_y + CAMARA_VISTA_ALTO) // TILE_ALTO) + 1
+
+        for col in range(start_col, end_col + 1):
+            for fila in range(start_row, end_row + 1):
+                draw_x = (col * TILE_ANCHO) - cam_x
+                draw_y = (fila * TILE_ALTO) - cam_y
+                superficie.blit(self.tile_base, (draw_x, draw_y))
+
+        # 2) Parcelas regadas: solo dentro de la granja lógica.
         for x in range(self.ancho):
             for y in range(self.alto):
-                if self.matriz[x][y].regada:
-                    pantalla.blit(self.tile_regado, (x * TILE_ANCHO, y * TILE_ALTO))
+                if not self.matriz[x][y].regada:
+                    continue
+
+                draw_x = x * TILE_ANCHO - cam_x
+                draw_y = y * TILE_ALTO - cam_y
+
+                if draw_x <= -TILE_ANCHO or draw_x >= CAMARA_VISTA_ANCHO:
+                    continue
+                if draw_y <= -TILE_ALTO or draw_y >= CAMARA_VISTA_ALTO:
+                    continue
+
+                superficie.blit(self.tile_regado, (draw_x, draw_y))
+
+
+class Camara:
+    def __init__(self, ancho_mundo, alto_mundo):
+        self.ancho_mundo = max(ancho_mundo, CAMARA_VISTA_ANCHO)
+        self.alto_mundo = max(alto_mundo, CAMARA_VISTA_ALTO)
+        self.x = 0
+        self.y = 0
+
+    def update(self, objetivo_x, objetivo_y):
+        centro_x = objetivo_x + (SPRITE_ANCHO_JUEGO / 2)
+        centro_y = objetivo_y + (SPRITE_ALTO_JUEGO / 2)
+
+        self.x = int(centro_x - (CAMARA_VISTA_ANCHO / 2))
+        self.y = int(centro_y - (CAMARA_VISTA_ALTO / 2))
+
+        # Limita la cámara a los bordes del mundo jugable.
+        self.x = max(0, min(self.x, self.ancho_mundo - CAMARA_VISTA_ANCHO))
+        self.y = max(0, min(self.y, self.alto_mundo - CAMARA_VISTA_ALTO))
 
 # ==========================================
 # 3. CLASES DE DECORACIÓN 
@@ -141,12 +198,20 @@ class Casa:
             self.image = pygame.image.load(ruta_imagen).convert_alpha()
         except FileNotFoundError:
             print(f"ERROR: No se encontró '{ruta_imagen}'.")
-            sys.exit()
+            sys.exit(1)
         
         self.y_bottom = y + self.image.get_height()
 
-    def draw(self, pantalla):
-        pantalla.blit(self.image, (self.x, self.y))
+    def draw(self, superficie, cam_x, cam_y):
+        superficie.blit(self.image, (self.x - cam_x, self.y - cam_y))
+
+    def get_collision_rect(self):
+        # Solo la base de la casa bloquea al jugador.
+        hit_w = int(self.image.get_width() * 0.62)
+        hit_h = int(self.image.get_height() * 0.30)
+        hit_x = self.x + (self.image.get_width() - hit_w) // 2
+        hit_y = self.y + self.image.get_height() - hit_h
+        return pygame.Rect(hit_x, hit_y, hit_w, hit_h)
 
 class Arbol:
     # Añadimos el parámetro opcional al final
@@ -182,8 +247,16 @@ class Arbol:
                 self.frame_index = 0
             self.image = self.frames[self.frame_index]
 
-    def draw(self, pantalla):
-        pantalla.blit(self.image, (self.x, self.y))
+    def draw(self, superficie, cam_x, cam_y):
+        superficie.blit(self.image, (self.x - cam_x, self.y - cam_y))
+
+    def get_collision_rect(self):
+        # El tronco/base del árbol es la zona sólida.
+        hit_w = int(self.image.get_width() * 0.45)
+        hit_h = int(self.image.get_height() * 0.22)
+        hit_x = self.x + (self.image.get_width() - hit_w) // 2
+        hit_y = self.y + self.image.get_height() - hit_h
+        return pygame.Rect(hit_x, hit_y, hit_w, hit_h)
 
     def update(self):
         self.animation_timer += VELOCIDAD_ANIMACION_ARBOL
@@ -194,25 +267,27 @@ class Arbol:
                 self.frame_index = 0
             self.image = self.frames[self.frame_index]
 
-    def draw(self, pantalla):
-        pantalla.blit(self.image, (self.x, self.y))
+    def draw(self, superficie, cam_x, cam_y):
+        superficie.blit(self.image, (self.x - cam_x, self.y - cam_y))
 
 # ==========================================
 # 4. CLASE JUGADOR 
 # ==========================================
 class Jugador:
-    def __init__(self, x_inicio, y_inicio):
+    def __init__(self, x_inicio, y_inicio, ancho_mundo, alto_mundo):
         self.x = x_inicio
         self.y = y_inicio
+        self.ancho_mundo = ancho_mundo
+        self.alto_mundo = alto_mundo
         self.vx = 0
         self.vy = 0
         
         try:
-            hoja_idle = pygame.image.load("assets/idle.png").convert_alpha()
-            hoja_walk = pygame.image.load("assets/walking.png").convert_alpha()
+            hoja_idle = pygame.image.load(asset_path("idle.png")).convert_alpha()
+            hoja_walk = pygame.image.load(asset_path("walking.png")).convert_alpha()
         except FileNotFoundError:
-            print("ERROR: Faltan 'assets/idle.png' o 'assets/walking.png'.")
-            sys.exit()
+            print("ERROR: Faltan 'idle.png' o 'walking.png' en la carpeta Assets.")
+            sys.exit(1)
 
         COLUMNAS_IDLE = 4 
         COLUMNAS_WALK = 6 
@@ -265,12 +340,41 @@ class Jugador:
             self.vx *= 0.7071
             self.vy *= 0.7071
 
-    def update(self):
-        self.x += self.vx
-        self.y += self.vy
-        
-        self.x = max(0, min(self.x, ANCHO_PANTALLA - SPRITE_ANCHO_JUEGO))
-        self.y = max(0, min(self.y, ALTO_PANTALLA - 100 - SPRITE_ALTO_JUEGO))
+    def _get_rect_colision(self, pos_x=None, pos_y=None):
+        x = self.x if pos_x is None else pos_x
+        y = self.y if pos_y is None else pos_y
+
+        # Hitbox de pies: permite acercarse visualmente sin atravesar objetos.
+        hit_w = int(SPRITE_ANCHO_JUEGO * 0.34)
+        hit_h = int(SPRITE_ALTO_JUEGO * 0.26)
+        hit_x = int(x + (SPRITE_ANCHO_JUEGO - hit_w) / 2)
+        hit_y = int(y + SPRITE_ALTO_JUEGO - hit_h)
+        return pygame.Rect(hit_x, hit_y, hit_w, hit_h)
+
+    def update(self, obstaculos):
+        nuevo_x = self.x + self.vx
+        nuevo_x = max(0, min(nuevo_x, self.ancho_mundo - SPRITE_ANCHO_JUEGO))
+        rect_x = self._get_rect_colision(pos_x=nuevo_x, pos_y=self.y)
+        for obstaculo in obstaculos:
+            if rect_x.colliderect(obstaculo):
+                if self.vx > 0:
+                    nuevo_x = obstaculo.left - (SPRITE_ANCHO_JUEGO - rect_x.width) / 2 - rect_x.width
+                elif self.vx < 0:
+                    nuevo_x = obstaculo.right - (SPRITE_ANCHO_JUEGO - rect_x.width) / 2
+                rect_x = self._get_rect_colision(pos_x=nuevo_x, pos_y=self.y)
+        self.x = max(0, min(nuevo_x, self.ancho_mundo - SPRITE_ANCHO_JUEGO))
+
+        nuevo_y = self.y + self.vy
+        nuevo_y = max(0, min(nuevo_y, self.alto_mundo - SPRITE_ALTO_JUEGO))
+        rect_y = self._get_rect_colision(pos_x=self.x, pos_y=nuevo_y)
+        for obstaculo in obstaculos:
+            if rect_y.colliderect(obstaculo):
+                if self.vy > 0:
+                    nuevo_y = obstaculo.top - (SPRITE_ALTO_JUEGO - rect_y.height) - rect_y.height
+                elif self.vy < 0:
+                    nuevo_y = obstaculo.bottom - (SPRITE_ALTO_JUEGO - rect_y.height)
+                rect_y = self._get_rect_colision(pos_x=self.x, pos_y=nuevo_y)
+        self.y = max(0, min(nuevo_y, self.alto_mundo - SPRITE_ALTO_JUEGO))
         
         self.y_bottom = self.y + SPRITE_ALTO_JUEGO
 
@@ -283,8 +387,8 @@ class Jugador:
                 self.frame_index = 0
             self.image = current_anim[self.frame_index]
 
-    def draw(self, pantalla):
-        pantalla.blit(self.image, (self.x, self.y))
+    def draw(self, superficie, cam_x, cam_y):
+        superficie.blit(self.image, (self.x - cam_x, self.y - cam_y))
 
 # ==========================================
 # 5. CICLO PRINCIPAL
@@ -294,27 +398,27 @@ def main():
     pantalla = pygame.display.set_mode((ANCHO_PANTALLA, ALTO_PANTALLA))
     pygame.display.set_caption("Moonvale - Hackathon Prototype")
     reloj = pygame.time.Clock()
+    superficie_camara = pygame.Surface((CAMARA_VISTA_ANCHO, CAMARA_VISTA_ALTO), pygame.SRCALPHA)
 
     try:
-        hoja_tiles = pygame.image.load("assets/FieldsTileset.png").convert_alpha()
+        hoja_tiles = pygame.image.load(asset_path("FieldsTileset.png")).convert_alpha()
     except FileNotFoundError:
-        print("ERROR: No se encontró 'assets/FieldsTileset.png'.")
-        sys.exit()
+        print("ERROR: No se encontró 'FieldsTileset.png' en la carpeta Assets.")
+        sys.exit(1)
     
-    granja = Granja(10, 10, hoja_tiles)
-    jugador = Jugador(ANCHO_PANTALLA//2, (ALTO_PANTALLA//2) - 100)
+    granja = Granja(MAPA_ANCHO, MAPA_ALTO, hoja_tiles)
 
     try:
-        hoja_arboles = pygame.image.load("assets/treeAnims.png").convert_alpha()
+        hoja_arboles = pygame.image.load(asset_path("treeAnims.png")).convert_alpha()
     except FileNotFoundError:
-        print("ERROR: No se encontró 'assets/treeAnims.png'.")
-        sys.exit()
+        print("ERROR: No se encontró 'treeAnims.png' en la carpeta Assets.")
+        sys.exit(1)
 
     decoraciones = [
-        Casa("assets/House1.png", 20, 20),
-        Casa("assets/House2.png", 264, 20), 
-        Casa("assets/House3.png", 600, 20), 
-        Casa("assets/House4.png", 600, 250), 
+        Casa(asset_path("House1.png"), 20, 20),
+        Casa(asset_path("House2.png"), 264, 20), 
+        Casa(asset_path("House3.png"), 600, 20), 
+        Casa(asset_path("House4.png"), 600, 250), 
     ]
     
     arboles = [
@@ -323,6 +427,13 @@ def main():
         # A esta instancia en específico le decimos que tome 96 píxeles de ancho
         Arbol(hoja_arboles, 550, 200, 6, ancho_override=96)  
     ]
+
+    # Tamaño del mundo basado en el mapa principal.
+    ancho_mundo = granja.ancho_px
+    alto_mundo = granja.alto_px
+
+    jugador = Jugador(ancho_mundo // 2, alto_mundo // 2, ancho_mundo, alto_mundo)
+    camara = Camara(ancho_mundo, alto_mundo)
     
     corriendo = True
     while corriendo:
@@ -336,23 +447,30 @@ def main():
                     granja.regar_en_cadena(5, 5, 4)
 
         jugador.handle_input()
-        jugador.update()
+
+        obstaculos = [obj.get_collision_rect() for obj in decoraciones + arboles]
+        jugador.update(obstaculos)
+        camara.update(jugador.x, jugador.y)
 
         for arb in arboles:
             arb.update()
 
-        granja.draw(pantalla)
-        
-        pygame.draw.rect(pantalla, DARK_GRAY_UI, (0, ALTO_PANTALLA - 100, ANCHO_PANTALLA, 100))
-        fuente = pygame.font.SysFont("Arial", 22)
-        texto = fuente.render("Área de Inventario (WASD mover, ESPACIO demo Recursividad)", True, (200, 200, 200))
-        pantalla.blit(texto, (20, ALTO_PANTALLA - 60))
+        superficie_camara.fill(PASTEL_SKY_BLUE)
+        granja.draw(superficie_camara, camara.x, camara.y)
 
         todos_los_sprites = decoraciones + arboles + [jugador]
         todos_los_sprites.sort(key=lambda s: s.y_bottom)
         
         for spr in todos_los_sprites:
-            spr.draw(pantalla)
+            spr.draw(superficie_camara, camara.x, camara.y)
+
+        vista_escalada = pygame.transform.smoothscale(superficie_camara, (ANCHO_PANTALLA, ALTO_JUEGO))
+        pantalla.blit(vista_escalada, (0, 0))
+
+        pygame.draw.rect(pantalla, DARK_GRAY_UI, (0, ALTO_JUEGO, ANCHO_PANTALLA, ALTO_UI))
+        fuente = pygame.font.SysFont("Arial", 22)
+        texto = fuente.render("Área de Inventario (WASD mover, ESPACIO demo Recursividad)", True, (200, 200, 200))
+        pantalla.blit(texto, (20, ALTO_JUEGO + 40))
 
         pygame.display.flip()
         reloj.tick(FPS)
