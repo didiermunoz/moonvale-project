@@ -1,130 +1,321 @@
-# Moonvale Project - Historial de Cambios
+# Moonvale Project
 
-Este documento resume, en orden cronologico, los cambios realizados hasta el momento en el proyecto.
+Proyecto de juego 2D estilo farming/sandbox hecho con pygame.
 
-## Correccion de arranque de main.py
-- Se detecto error al iniciar por nombre de archivo con mayusculas/minusculas distinto al real (Linux es case-sensitive).
-- Se corrigio la carga del inventario a:
-	- inventory_Light_example_with_slots.png
-- Resultado: el juego inicio sin ese error de assets.
+## Que incluye el juego
 
-## Agregado de casa superior en el mapa
-- Se agrego carga de House4.png.
-- Se coloco la casa centrada en la parte superior del mapa (y=0).
-- Se agrego constante ESCALA_CASA para controlar el tamano visual.
-- Resultado: casa visible, ajustable por escala y con colision como obstaculo.
+- Mapa grande con camara que sigue al jugador.
+- Sistema de movimiento 8 direcciones con colisiones.
+- Herramientas base: azada, hacha y regadera.
+- Sistema de terreno arado, riego recursivo y crecimiento de cultivos.
+- Inventario visual con seleccion de slots y cantidades.
+- NPC vaca con animacion y tienda de compra/venta.
+- Cambio de dia al dormir en la puerta de la casa.
+- Condicion de victoria por monedas y derrota por limite de dias.
+- UI con fuente pixel y musica de fondo en loop.
 
-## Sistema de dia y texto en pantalla
-- Se agrego indicador de dia en esquina superior izquierda.
-- Se implemento helper de texto con borde: dibujar_texto_con_borde(...).
-- Inicialmente hubo avance de dia por tiempo; luego se sustituyo por interaccion con puerta.
-- Resultado: el numero de dia se muestra con mejor legibilidad.
+## Requerimientos
 
-## Dormir por interaccion con puerta + transicion
-- Se implemento zona de puerta (rectangulo de interaccion) en la parte frontal de la casa.
-- Al presionar E cerca de la puerta:
-	- aumenta dia_actual,
-	- inicia transicion negra DURACION_TRANSICION_DIA,
-	- se bloquean acciones durante la transicion.
-- Se agrego mensaje contextual: "Presiona E para dormir".
-- Resultado: cambio de dia controlado por gameplay y no por temporizador.
+- Python 3.10+
+- Sistema con soporte de ventana (pygame)
+- Carpeta Assets completa incluida en el repo
 
-## Ajustes iterativos de hitbox de puerta
-- Se ajusto varias veces la zona de interaccion para que no fuera ni demasiado amplia ni demasiado estricta.
-- Ajuste actual:
-	- zona_interaccion_puerta = puerta_rect.inflate(int(TAM_TILE * 0.35), int(TAM_TILE * 0.5))
-	- zona_interaccion_puerta.y += int(TAM_TILE * 0.5)
-- Resultado: interaccion mas usable al frente de la puerta.
+## Dependencias
 
-## Cercas a ambos lados de la casa
-- Se inicio con cercas procedurales y despues se migro a sprites desde Fences.png.
-- Se eligieron piezas conectadas horizontales (izquierda, medio, derecha).
-- Se dejo visual de una sola linea (recorte de mitad superior del tile de cerca).
-- Se aumento altura visual de la cerca en el escalado para mejor presencia.
-- Resultado: cercas laterales conectadas, coherentes y con colision.
+Dependencias directas usadas por el modulo principal:
 
-## Agregado de vaca y posicionamiento
-- Se agrego entidad vaca cerca del extremo de la cerca izquierda.
-- Se escalo la vaca para que tuviera mayor presencia en escena.
-- Se le agrego hitbox para colision con jugador.
-- Resultado: NPC/objeto interactivo visible y bloqueante.
+- pygame
+- numpy
 
-## Animacion de vaca
-- Se implemento clase Vaca con frames animados del spritesheet.
-- Se agrego update con temporizador de animacion independiente.
-- Resultado: vaca con movimiento visual continuo.
+Dependencias de libreria estandar usadas:
 
-## Icono flotante de carrito sobre la vaca
-- Se agrego icono de carrito extraido de white icons.png.
-- Se corrigio recorte del icono usando rectangulo exacto (en lugar de grilla fija).
-- Se agrego flotacion vertical suave con seno para feedback visual.
-- Resultado: indicador claro de interaccion de tienda.
+- sys
+- os
+- random
 
-## Fuente personalizada para UI
-- Se cargo y aplico pixelFont-7-8x14-sproutLands.ttf para textos principales.
-- Se uso en dia, transicion y UI de tienda.
-- Resultado: estilo visual mas consistente con el pack grafico.
+Instalacion rapida:
 
-## Menu de tienda con la vaca (compra/venta)
-- Se creo modal de tienda al presionar E cerca de la vaca.
-- Se agregaron:
-	- Tabs: Compra / Venta
-	- Boton cerrar (X)
-	- Visualizacion de monedas
-	- Filas por cultivo
-- Se bloquearon movimientos/interacciones normales mientras la tienda esta abierta.
-- Resultado: flujo basico de comercio funcional.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install pygame numpy
+```
 
-## Compra de semillas
-- Se definieron dos semillas vendibles:
-	- Trigo
-	- Jitomate
-- Se usan sprites de sobres desde Basic_Plants.png (columna 1, filas 1 y 2).
-- Se implementaron precios de compra:
-	- PRECIO_COMPRA_SEMILLA_1 = 15
-	- PRECIO_COMPRA_SEMILLA_2 = 22
-- Resultado: compras descuentan monedas y aumentan inventario de semillas.
+Ejecucion:
 
-## Venta de sobres y plantas (precios distintos)
-- Se implemento inventario separado para:
-	- semillas (sobres)
-	- cosechas (plantas crecidas)
-- Se agrego venta por cada tipo con precios independientes.
-- Plantas crecidas venden mas caro que sobres.
-- Resultado: economia con diferencia de valor entre materia prima y producto final.
+```bash
+python main.py
+```
 
-## Layout de venta reorganizado
-- Panel derecho en modo venta ajustado para mostrar:
-	- Sobre arriba
-	- Planta abajo
-	por cada cultivo.
-- Se agregaron iconos pequenos para cada opcion de venta.
-- Resultado: lectura mas clara y menos confusa en botones de venta.
+## Estructura del proyecto
 
-## Correccion de click en venta
-- Se arreglo conflicto de deteccion de clics en el manejo de eventos.
-- Antes algunos clics en venta no entraban por prioridad/condicionales.
-- Se condicionaron correctamente acciones de compra y venta segun modo_tienda.
-- Resultado: botones de venta detectan correctamente.
+```text
+moonvale-project/
+  main.py
+  README.md
+  Assets/
+    House1.png
+    House2.png
+    House3.png
+    House4.png
+    Cloud_Country.mp3
+    FieldsTileset.png
+    idle.png
+    walking.png
+    treeAnims.png
+    Sprout Lands - Sprites - Basic pack/
+    Sprout Lands - UI Pack - Basic pack/
+```
 
-## Prompt contextual en casa
-- Se agrego mensaje contextual en pantalla para la casa:
-	- "Presiona E para dormir"
-- Resultado: feedback consistente con el prompt de la vaca.
+## Referencia del modulo
 
-## Musica de fondo en loop
-- Se agrego reproduccion automatica de musica al iniciar el juego.
-- Archivo usado en Assets: Cloud_Country.mp3.
-- Configuracion actual:
-	- Reproduccion infinita con pygame.mixer.music.play(-1)
-	- Volumen inicial con constante VOLUMEN_MUSICA = 0.35
-- Resultado: el juego ahora tiene musica ambiental continua.
+Modulo principal:
 
-## Estado actual del proyecto
-- Juego inicia sin error de assets principal reportado.
-- Casa, cercas, vaca, icono flotante y tienda estan integrados.
-- Cambio de dia por dormir en puerta esta funcional con transicion negra.
-- Economia base de compra/venta implementada.
+- main.py
 
-## Pendiente natural (siguiente mejora sugerida)
-- Completar ciclo de cultivo para poblar inventario_cosechas desde gameplay (siembra, crecimiento, cosecha), y no solo por pruebas/manual.
+Punto de entrada:
+
+- main()
+
+Constantes de gameplay relevantes:
+
+- ANCHO_PANTALLA, ALTO_PANTALLA, FPS
+- ESCALA, TAM_TILE, ANCHO_MAPA, ALTO_MAPA
+- VELOCIDAD_JUGADOR, VELOCIDAD_ANIMACION, VELOCIDAD_ANIMACION_VACA
+- DURACION_TRANSICION_DIA
+- META_MONEDAS_VICTORIA, DIA_LIMITE_DERROTA
+- Precios de compra/venta de semillas y plantas
+
+## Clases
+
+### EstadoJuego
+
+Responsabilidad:
+
+- Estado global de partida: monedas y dia actual.
+
+POO:
+
+- Encapsulamiento con atributo privado __monedas.
+- Property monedas con validacion para no permitir valores negativos.
+
+### EntidadVisible
+
+Responsabilidad:
+
+- Clase base renderizable (image + rect + draw).
+
+POO:
+
+- Abstraccion de una entidad visible del mundo.
+- Reutilizacion por herencia en entidades concretas.
+
+### Obstaculo(EntidadVisible)
+
+Responsabilidad:
+
+- Objeto estatico con hitbox de colision.
+
+POO:
+
+- Herencia de draw y estructura base de entidad.
+
+### Vaca(EntidadVisible)
+
+Responsabilidad:
+
+- NPC animado con icono de carrito flotante.
+
+POO:
+
+- Herencia de EntidadVisible.
+- Polimorfismo al sobreescribir draw.
+
+### Jugador(EntidadVisible)
+
+Responsabilidad:
+
+- Input, animacion por direccion, movimiento y colisiones.
+
+POO:
+
+- Herencia de EntidadVisible.
+- Estado interno de animaciones por direccion.
+
+### Camara
+
+Responsabilidad:
+
+- Seguimiento del jugador y clamping a limites del mapa.
+
+### Granja
+
+Responsabilidad:
+
+- Logica agricola: arar, plantar, regar, cosechar y dibujar tiles/cultivos.
+
+POO:
+
+- Alta cohesion de reglas de farming en una sola entidad.
+- Metodo recursivo regar_area_recursiva para propagacion de riego.
+
+### Inventario
+
+Responsabilidad:
+
+- Slots, cantidades, consumo de semillas y render de UI de inventario.
+
+## Funciones
+
+### Utilidades de recursos y sprites
+
+- asset_path(*rutas)
+- cargar_imagen_variantes(*rutas_relativas)
+- cargar_musica_variantes(*rutas_relativas)
+- extraer_sprite_exacto(hoja, col, fila, ancho_tiles, alto_tiles, escala)
+- dibujar_texto_con_borde(superficie, fuente, texto, pos, color_texto, color_borde)
+
+### UI de tienda
+
+- construir_layout_tienda(panel_rect)
+- draw_tienda(superficie, panel_img, boton_img, fuente_titulo, fuente_texto, layout, modo_tienda, ...)
+
+### Runtime principal
+
+- main()
+
+## Runtime flow summary
+
+1. main() inicializa pygame, ventana, reloj y estado global.
+2. Carga hojas de sprites, UI, fuentes, audio y recursos del mapa.
+3. Construye objetos del mundo: granja, jugador, camara, inventario, obstaculos y vaca.
+4. En cada frame procesa eventos de teclado/raton.
+5. Aplica logica de tienda, herramientas, sembrado, riego/cosecha y dormir.
+6. Actualiza entidades dinamicas (jugador, vaca, camara).
+7. Renderiza mundo, entidades, hover de accion, HUD, prompts y UI de tienda/inventario.
+8. Evalua condiciones de victoria/derrota y transiciones de dia.
+9. Repite el loop hasta cerrar ventana.
+
+## Controles
+
+- Movimiento: W A S D o flechas.
+- Seleccion de slot: teclas 1..7.
+- Accion contextual/interaccion: E.
+- Uso de herramienta/siembra/regar/cosechar: clic izquierdo.
+- Cerrar tienda: ESC.
+
+## Assets usados
+
+### Mundo y tiles
+
+- Sprout Lands - Sprites - Basic pack/Tilesets/Grass.png
+- Sprout Lands - Sprites - Basic pack/Tilesets/Fences.png
+- Sprout Lands - Sprites - Basic pack/Tilesets/Tilled Dirt.png
+
+### Personajes y NPC
+
+- Sprout Lands - Sprites - Basic pack/Characters/Basic Charakter Spritesheet.png
+- Sprout Lands - Sprites - Basic pack/Characters/Free Cow Sprites.png
+
+### Objetos y plantas
+
+- Sprout Lands - Sprites - Basic pack/Objects/Basic Grass Biom things 1.png
+- Sprout Lands - Sprites - Basic pack/Objects/Basic_Plants.png
+- Sprout Lands - Sprites - Basic pack/Objects/Basic tools and meterials.png
+- Sprout Lands - Sprites - Basic pack/Objects/inventory_Light_example_with_slots.png
+
+### UI
+
+- Sprout Lands - UI Pack - Basic pack/Sprite sheets/Setting menu.png
+- Sprout Lands - UI Pack - Basic pack/Sprite sheets/buttons/Square Buttons 26x19.png
+- Sprout Lands - UI Pack - Basic pack/Sprite sheets/Icons/white icons.png
+- Sprout Lands - UI Pack - Basic pack/fonts/pixelFont-7-8x14-sproutLands.ttf
+
+### Extras locales
+
+- House4.png
+- Cloud_Country.mp3
+
+## Herencias
+
+Relaciones de herencia declaradas en el codigo:
+
+- EntidadVisible -> clase base
+- Obstaculo(EntidadVisible)
+- Vaca(EntidadVisible)
+- Jugador(EntidadVisible)
+
+## Analisis POO detallado
+
+### Encapsulamiento
+
+- EstadoJuego protege monedas con __monedas y property monedas.
+- Regla de negocio embebida: nunca monedas negativas.
+
+### Abstraccion
+
+- EntidadVisible abstrae lo comun de cualquier entidad dibujable.
+- Camara abstrae desplazamiento y limites del viewport.
+- Granja abstrae reglas de dominio agricola.
+
+### Herencia
+
+- Reutilizacion de logica comun de draw/rect en entidad base.
+- Simplifica la composicion del listado entidades para render por profundidad.
+
+### Polimorfismo
+
+- Vaca redefine draw para agregar icono flotante sin romper contrato base.
+- Entidades diferentes se procesan uniformemente en la lista entidades.
+
+### Cohesion y responsabilidad
+
+- Granja concentra operaciones del terreno/cultivos.
+- Inventario concentra estado de slots/cantidades y su visualizacion.
+- draw_tienda separa render de tienda del loop principal.
+
+### Acoplamiento
+
+- main() mantiene alto acoplamiento por centralizar orquestacion de recursos y estados.
+- Recomendacion: extraer subsistemas (input, escena, UI, audio) a modulos separados.
+
+### Recursion aplicada
+
+- Granja.regar_area_recursiva implementa flood-fill sobre tiles arados.
+- Usa set de visitados para evitar ciclos infinitos.
+
+### Fortalezas actuales
+
+- Arquitectura clara para un prototipo jugable.
+- Buen uso de herencia simple y encapsulamiento de estado critico.
+- Flujo gameplay completo: recolectar, vender, dormir, progresion por dias.
+
+### Oportunidades de mejora
+
+- Dividir main.py en paquetes (core, entities, systems, ui, data).
+- Definir dataclasses para configuracion y assets.
+- Desacoplar input de logica de dominio.
+- Agregar pruebas unitarias para EstadoJuego y Granja.
+- Incorporar tipado estatico progresivo (typing).
+
+---
+
+## Historial de cambios hechos
+
+- Correccion de arranque de main.py.
+- Agregado de casa superior en el mapa.
+- Sistema de dia y texto en pantalla.
+- Dormir por interaccion con puerta + transicion.
+- Ajustes iterativos de hitbox de puerta.
+- Cercas a ambos lados de la casa.
+- Agregado de vaca y posicionamiento.
+- Animacion de vaca.
+- Icono flotante de carrito sobre la vaca.
+- Fuente personalizada para UI.
+- Menu de tienda con la vaca (compra/venta).
+- Compra de semillas.
+- Venta de sobres y plantas (precios distintos).
+- Layout de venta reorganizado.
+- Correccion de click en venta.
+- Prompt contextual en casa.
+- Musica de fondo en loop.
