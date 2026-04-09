@@ -23,6 +23,8 @@ ALTO_MAPA = 2000
 
 VELOCIDAD_JUGADOR = 5
 VELOCIDAD_ANIMACION = 0.15
+ESCALA_CASA = 2.5
+DURACION_TRANSICION_DIA = 1.0
 
 
 # ==========================================
@@ -49,6 +51,21 @@ def extraer_sprite_exacto(hoja, col, fila, ancho_tiles, alto_tiles, escala):
     imagen.blit(hoja, (0, 0), rect)
    
     return pygame.transform.scale(imagen, (int(ancho_px * escala), int(alto_px * escala)))
+
+
+def dibujar_texto_con_borde(superficie, fuente, texto, pos, color_texto, color_borde):
+    """Dibuja texto con borde simple para mejorar visibilidad."""
+    x, y = pos
+    texto_base = fuente.render(texto, True, color_texto)
+
+    for dx in (-2, -1, 0, 1, 2):
+        for dy in (-2, -1, 0, 1, 2):
+            if dx == 0 and dy == 0:
+                continue
+            sombra = fuente.render(texto, True, color_borde)
+            superficie.blit(sombra, (x + dx, y + dy))
+
+    superficie.blit(texto_base, (x, y))
 
 
 # ==========================================
@@ -281,6 +298,10 @@ def main():
     # --- TÍTULO ACTUALIZADO ---
     pygame.display.set_caption("Moonvale - Inventario y Arado")
     reloj = pygame.time.Clock()
+    fuente_dia = pygame.font.Font(None, 44)
+    fuente_transicion = pygame.font.Font(None, 56)
+    dia_actual = 1
+    transicion_dia_restante = 0.0
 
 
     base = "Sprout Lands - Sprites - Basic pack"
@@ -289,9 +310,17 @@ def main():
         hoja_pj = pygame.image.load(asset_path(base, "Characters", "Basic Charakter Spritesheet.png")).convert_alpha()
         hoja_objs = pygame.image.load(asset_path(base, "Objects", "Basic Grass Biom things 1.png")).convert_alpha()
         hoja_tierra = pygame.image.load(asset_path(base, "Tilesets", "Tilled Dirt.png")).convert_alpha()
+        casa_superior = pygame.image.load(asset_path("House4.png")).convert_alpha()
+        casa_superior = pygame.transform.scale(
+            casa_superior,
+            (
+                int(casa_superior.get_width() * ESCALA_CASA),
+                int(casa_superior.get_height() * ESCALA_CASA),
+            ),
+        )
        
         # --- CARGAMOS LA TEXTURA DEL INVENTARIO ---
-        img_inventario = pygame.image.load(asset_path(base, "Objects", "Inventory_Light_example_with_slots.png")).convert_alpha()
+        img_inventario = pygame.image.load(asset_path(base, "Objects", "inventory_Light_example_with_slots.png")).convert_alpha()
         hoja_herramientas = pygame.image.load(asset_path(base, "Objects", "Basic tools and meterials.png")).convert_alpha()
     except Exception as e:
         print(f"Error cargando archivos: {e}")
@@ -390,8 +419,31 @@ def main():
         oy = fila * TAM_TILE
         objetos.append(Obstaculo(ox, oy, img))
 
+    # Casa principal colocada en la parte superior y centrada del mapa
+    casa_x = (ANCHO_MAPA // 2) - (casa_superior.get_width() // 2)
+    casa_y = 0
+    objetos.append(Obstaculo(casa_x, casa_y, casa_superior))
+
+    # Zona de interacción de la puerta (centro inferior de la casa)
+    puerta_w = TAM_TILE
+    puerta_h = int(TAM_TILE * 1.3)
+    puerta_x = casa_x + (casa_superior.get_width() // 2) - (puerta_w // 2)
+    puerta_y = casa_y + int(casa_superior.get_height() * 0.66)
+    puerta_rect = pygame.Rect(puerta_x, puerta_y, puerta_w, puerta_h)
+    # Zona más amplia hacia abajo para permitir interacción justo frente a la puerta
+    zona_interaccion_puerta = pygame.Rect(
+        puerta_x - int(TAM_TILE * 0.6),
+        puerta_y + int(TAM_TILE * 0.4),
+        puerta_w + int(TAM_TILE * 1.2),
+        puerta_h + int(TAM_TILE * 1.8),
+    )
+
 
     while True:
+        dt = reloj.tick(FPS) / 1000.0
+        if transicion_dia_restante > 0:
+            transicion_dia_restante = max(0.0, transicion_dia_restante - dt)
+
         # --- OBTENER POSICIÓN RATÓN EN CADA FRAME ---
         mouse_pos = pygame.mouse.get_pos()
 
@@ -399,9 +451,14 @@ def main():
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
+
+            if ev.type == pygame.KEYDOWN and ev.key == pygame.K_e:
+                if transicion_dia_restante == 0 and jugador.hitbox.colliderect(zona_interaccion_puerta):
+                    dia_actual += 1
+                    transicion_dia_restante = DURACION_TRANSICION_DIA
            
             if ev.type == pygame.MOUSEBUTTONDOWN:
-                if ev.button == 1:
+                if ev.button == 1 and transicion_dia_restante == 0:
                     granja.intentar_arar(mouse_pos, camara.x, camara.y, jugador.rect, objetos)
 
 
@@ -426,13 +483,42 @@ def main():
 
         for e in entidades:
             e.draw(pantalla, camara.x, camara.y)
+
+        # Indicador de día en la esquina superior izquierda
+        dibujar_texto_con_borde(
+            pantalla,
+            fuente_dia,
+            f"Dia {dia_actual}",
+            (16, 14),
+            (0, 0, 0),
+            (255, 255, 255),
+        )
+
+        if transicion_dia_restante > 0:
+            pantalla.fill((0, 0, 0))
+            dibujar_texto_con_borde(
+                pantalla,
+                fuente_transicion,
+                f"Dia {dia_actual}",
+                (ANCHO_PANTALLA // 2 - 70, ALTO_PANTALLA // 2 - 36),
+                (255, 255, 255),
+                (0, 0, 0),
+            )
+            dibujar_texto_con_borde(
+                pantalla,
+                fuente_dia,
+                "Cambiando de dia...",
+                (ANCHO_PANTALLA // 2 - 150, ALTO_PANTALLA // 2 + 16),
+                (255, 255, 255),
+                (0, 0, 0),
+            )
            
         # --- 4. DIBUJAR UI (Inventario estático, siempre arriba de todo) ---
-        inventario.draw(pantalla)
+        if transicion_dia_restante == 0:
+            inventario.draw(pantalla)
 
 
         pygame.display.flip()
-        reloj.tick(FPS)
 
 
 if __name__ == "__main__":
