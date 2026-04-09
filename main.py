@@ -136,6 +136,10 @@ class Granja:
         tinte_labrado = pygame.Surface((TILE_ANCHO, TILE_ALTO), pygame.SRCALPHA)
         tinte_labrado.fill((148, 99, 58, 120))
         self.tile_labrado.blit(tinte_labrado, (0, 0))
+        self.tile_regado_labrado = self.tile_regado.copy()
+        tinte_regado_labrado = pygame.Surface((TILE_ANCHO, TILE_ALTO), pygame.SRCALPHA)
+        tinte_regado_labrado.fill((40, 28, 20, 95))
+        self.tile_regado_labrado.blit(tinte_regado_labrado, (0, 0))
 
         self.matriz = [[Parcela(PASTEL_SKY_BLUE,DARK_GRAY_UI) for _ in range(alto)] for _ in range(ancho)]
 
@@ -212,7 +216,10 @@ class Granja:
                     continue
 
                 if parcela.regada:
-                    superficie.blit(self.tile_regado, (draw_x, draw_y))
+                    if parcela.labrada:
+                        superficie.blit(self.tile_regado_labrado, (draw_x, draw_y))
+                    else:
+                        superficie.blit(self.tile_regado, (draw_x, draw_y))
                 elif parcela.labrada:
                     superficie.blit(self.tile_labrado, (draw_x, draw_y))
 
