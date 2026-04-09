@@ -124,6 +124,14 @@ Este documento resume, en orden cronologico, los cambios realizados hasta el mom
   - "Presiona E para dormir"
 - Resultado: feedback consistente con el prompt de la vaca.
 
+## 19) Musica de fondo en loop
+- Se agrego reproduccion automatica de musica al iniciar el juego.
+- Archivo usado en Assets: Cloud_Country.mp3.
+- Configuracion actual:
+  - Reproduccion infinita con pygame.mixer.music.play(-1)
+  - Volumen inicial con constante VOLUMEN_MUSICA = 0.35
+- Resultado: el juego ahora tiene musica ambiental continua.
+
 ## Estado actual del proyecto
 - Juego inicia sin error de assets principal reportado.
 - Casa, cercas, vaca, icono flotante y tienda estan integrados.

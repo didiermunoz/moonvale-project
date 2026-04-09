@@ -31,6 +31,7 @@ ESCALA_VACA = 4
 ESCALA_ICONO_CARRITO = 5
 ESCALA_SEMILLA_MENU = 5
 TAM_ICONO_VENTA = 28
+VOLUMEN_MUSICA = 0.35
 
 PRECIO_COMPRA_SEMILLA_1 = 15
 PRECIO_COMPRA_SEMILLA_2 = 22
@@ -536,6 +537,11 @@ def main():
         # --- CARGAMOS LA TEXTURA DEL INVENTARIO ---
         img_inventario = pygame.image.load(asset_path(base, "Objects", "inventory_Light_example_with_slots.png")).convert_alpha()
         hoja_herramientas = pygame.image.load(asset_path(base, "Objects", "Basic tools and meterials.png")).convert_alpha()
+
+        # Musica de fondo en loop (-1 = infinito)
+        pygame.mixer.music.load(asset_path("Cloud_Country.mp3"))
+        pygame.mixer.music.set_volume(VOLUMEN_MUSICA)
+        pygame.mixer.music.play(-1)
     except Exception as e:
         print(f"Error cargando archivos: {e}")
         return
