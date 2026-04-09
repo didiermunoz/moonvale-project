@@ -4,9 +4,6 @@ import os
 import random
 import numpy as np
 
-# ==========================================
-# CONFIGURACIÓN Y CONSTANTES
-# ==========================================
 ANCHO_PANTALLA = 800
 ALTO_PANTALLA = 600
 FPS = 60
@@ -29,8 +26,8 @@ ESCALA_ICONO_CARRITO = 5
 ESCALA_SEMILLA_MENU = 5
 TAM_ICONO_VENTA = 28
 
-META_MONEDAS_VICTORIA = 500  # Condición de victoria
-DIA_LIMITE_DERROTA = 10      # Condición de derrota
+META_MONEDAS_VICTORIA = 500
+DIA_LIMITE_DERROTA = 10
 VOLUMEN_MUSICA = 0.35 
 
 PRECIO_COMPRA_SEMILLA_1 = 15
@@ -40,16 +37,16 @@ PRECIO_VENTA_SEMILLA_2 = 13
 PRECIO_VENTA_PLANTA_1 = 24
 PRECIO_VENTA_PLANTA_2 = 31
 
-# ==========================================
-# UTILIDADES DE SISTEMA Y SPRITES
-# ==========================================
+
 def asset_path(*rutas):
-    """Obtiene la ruta absoluta de los recursos en la carpeta Assets."""
+    """Construye la ruta absoluta a un archivo dentro de la carpeta Assets del proyecto.
+    Permite cargar recursos sin depender del directorio desde donde se ejecuta el juego."""
     dir_actual = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(dir_actual, "Assets", *rutas)
 
 def extraer_sprite_exacto(hoja, col, fila, ancho_tiles, alto_tiles, escala):
-    """Recorta y escala un área específica de la hoja de sprites."""
+    """Recorta una región específica de una hoja de sprites usando coordenadas de tile y la escala al tamaño deseado.
+    Permite reutilizar una sola imagen con múltiples sprites en lugar de tener archivos separados."""
     x, y = (col - 1) * 16, (fila - 1) * 16
     ancho_px, alto_px = ancho_tiles * 16, alto_tiles * 16
     imagen = pygame.Surface((ancho_px, alto_px), pygame.SRCALPHA)
@@ -57,7 +54,8 @@ def extraer_sprite_exacto(hoja, col, fila, ancho_tiles, alto_tiles, escala):
     return pygame.transform.scale(imagen, (int(ancho_px * escala), int(alto_px * escala)))
 
 def dibujar_texto_con_borde(superficie, fuente, texto, pos, color_texto, color_borde):
-    """Dibuja texto con un borde simple (sombra) para mejorar la legibilidad."""
+    """Renderiza texto con un borde de píxeles en todas las direcciones para mejorar la legibilidad.
+    Se dibuja el texto de borde desplazado en un bucle antes de colocar el texto principal encima."""
     x, y = pos
     texto_base = fuente.render(texto, True, color_texto)
     for dx in (-2, -1, 0, 1, 2):
@@ -67,7 +65,8 @@ def dibujar_texto_con_borde(superficie, fuente, texto, pos, color_texto, color_b
     superficie.blit(texto_base, (x, y))
 
 def construir_layout_tienda(panel_rect):
-    """Genera los rectángulos de colisión (hitboxes) para la UI de la tienda."""
+    """Calcula y devuelve las hitboxes de todos los elementos interactivos de la tienda como un diccionario.
+    Centraliza la lógica de posicionamiento de la UI para que tanto el renderizado como la detección de clics usen las mismas coordenadas."""
     return {
         "tab_compra": pygame.Rect(panel_rect.x + 30, panel_rect.y + 58, 120, 44),
         "tab_venta": pygame.Rect(panel_rect.x + 170, panel_rect.y + 58, 120, 44),
@@ -84,7 +83,8 @@ def construir_layout_tienda(panel_rect):
 
 def draw_tienda(superficie, panel_img, boton_img, fuente_titulo, fuente_texto, layout, modo_tienda, 
                 estado_juego, semillas, cosechas, i_s1, i_s2, i_p1, i_p2, iv_s1, iv_s2, iv_p1, iv_p2):
-    """Renderiza la interfaz interactiva de la tienda de la vaca."""
+    """Dibuja la interfaz completa de la tienda de la vaca, incluyendo el panel, pestañas, iconos y botones de acción.
+    Muestra dinámicamente los elementos de compra o venta según el modo activo."""
     mpos = pygame.mouse.get_pos()
     overlay = pygame.Surface((ANCHO_PANTALLA, ALTO_PANTALLA), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 120))
@@ -94,7 +94,8 @@ def draw_tienda(superficie, panel_img, boton_img, fuente_titulo, fuente_texto, l
     superficie.blit(panel_img, panel_rect)
 
     def draw_btn(rect, text, is_active=True):
-        """Función interna para dibujar botones con efecto hover e inactivos."""
+        """Dibuja un botón individual con efecto hover y apariencia desactivada si el jugador no puede usarlo.
+        Detecta la posición del cursor para dar retroalimentación visual al pasar sobre el botón."""
         superficie.blit(pygame.transform.scale(boton_img, (rect.width, rect.height)), rect)
         color_texto, color_sombra = (30, 20, 15), (255, 255, 255)
         if not is_active:
@@ -141,43 +142,44 @@ def draw_tienda(superficie, panel_img, boton_img, fuente_titulo, fuente_texto, l
         draw_btn(layout["venta_p2"], f"Planta {PRECIO_VENTA_PLANTA_2}", cosechas['planta2'] > 0)
 
 
-# ==========================================
-# CLASES DE LÓGICA (OOP, Encapsulamiento y Herencia)
-# ==========================================
 class EstadoJuego:
-    """Clase principal que maneja el estado general y encapsula datos vitales (OOP Encapsulamiento)."""
+    """Almacena y protege los datos globales de la partida como las monedas y el día actual.
+    Aplica encapsulamiento usando un atributo privado y una propiedad para evitar valores inválidos."""
     def __init__(self):
-        self.__monedas = 120  # Atributo privado
+        self.__monedas = 120
         self.dia_actual = 1
 
     @property
     def monedas(self):
-        """Getter para obtener la cantidad de monedas."""
+        """Devuelve el valor actual de las monedas del jugador de forma segura."""
         return self.__monedas
 
     @monedas.setter
     def monedas(self, valor):
-        """Setter que previene que las monedas bajen de cero."""
+        """Asigna el nuevo valor de monedas, garantizando que nunca sea menor a cero."""
         self.__monedas = max(0, valor)
 
 class EntidadVisible:
-    """Clase Base (Superclase) para todos los objetos dibujables en pantalla (OOP Herencia)."""
+    """Superclase base para todos los objetos que se renderizan en pantalla.
+    Define la estructura común de imagen y posición, y provee el método draw que las subclases pueden heredar o sobreescribir."""
     def __init__(self, x, y, imagen):
         self.image = imagen
         self.rect = self.image.get_rect(topleft=(x, y))
 
     def draw(self, superficie, cam_x, cam_y):
-        """Método heredable para renderizar la entidad basada en la cámara."""
+        """Dibuja la entidad en pantalla ajustando su posición al offset de la cámara."""
         superficie.blit(self.image, (self.rect.x - cam_x, self.rect.y - cam_y))
 
 class Obstaculo(EntidadVisible):
-    """Subclase de EntidadVisible que representa objetos estáticos con colisión."""
+    """Subclase de EntidadVisible que representa objetos estáticos del escenario con colisión.
+    Genera automáticamente una hitbox en la base del sprite para una colisión más natural."""
     def __init__(self, x, y, imagen):
         super().__init__(x, y, imagen)
         self.hitbox = pygame.Rect(self.rect.x, self.rect.bottom - TAM_TILE, self.rect.width, TAM_TILE)
 
 class Vaca(EntidadVisible):
-    """Subclase de EntidadVisible que representa al NPC interactivo."""
+    """Subclase de EntidadVisible que representa al NPC de la tienda con animación y un icono flotante.
+    Usa numpy para calcular un movimiento sinusoidal en el icono sobre su cabeza."""
     def __init__(self, x, y, hoja, icono_carrito=None):
         frames = [
             extraer_sprite_exacto(hoja, 1, 1, 2, 2, ESCALA_VACA),
@@ -197,13 +199,13 @@ class Vaca(EntidadVisible):
         self.t_flotacion = 0.0
 
     def update(self, dt):
-        """Actualiza la animación y la posición del indicador flotante."""
+        """Avanza el temporizador de animación para cambiar de frame y actualiza el tiempo de flotación del icono."""
         self.timer += VELOCIDAD_ANIMACION_VACA
         self.image = self.frames[int(self.timer) % len(self.frames)]
         self.t_flotacion += dt * 5.0
 
     def draw(self, superficie, cam_x, cam_y):
-        """Dibuja a la vaca y su icono flotante de tienda."""
+        """Dibuja el sprite de la vaca y, si tiene icono asignado, lo renderiza flotando sobre ella con movimiento sinusoidal."""
         super().draw(superficie, cam_x, cam_y)
         if self.icono_carrito is not None:
             desfase_y = int(np.sin(self.t_flotacion) * 3)
@@ -211,7 +213,8 @@ class Vaca(EntidadVisible):
             superficie.blit(self.icono_carrito, (icono_x - cam_x, self.rect.y - self.icono_carrito.get_height() - 1 + desfase_y - cam_y))
 
 class Jugador(EntidadVisible):
-    """Subclase de EntidadVisible para el personaje controlable."""
+    """Subclase de EntidadVisible que representa al personaje controlado por el jugador.
+    Carga animaciones en las cuatro direcciones y maneja movimiento con resolución de colisiones por ejes separados."""
     def __init__(self, x, y, hoja):
         self.direccion = 'abajo'
         self.animaciones = {
@@ -228,7 +231,8 @@ class Jugador(EntidadVisible):
         self.fx, self.fy = float(self.hitbox.x), float(self.hitbox.y)
 
     def update(self, muros):
-        """Procesa el input, mueve la hitbox de forma fluida y maneja colisiones."""
+        """Lee el input del teclado, mueve la hitbox en X e Y por separado y resuelve colisiones contra la lista de muros.
+        Al separar los ejes se evita que el jugador quede atrapado en esquinas."""
         teclas = pygame.key.get_pressed()
         vx, vy = 0, 0
         if teclas[pygame.K_LEFT] or teclas[pygame.K_a]: vx = -VELOCIDAD_JUGADOR; self.direccion = 'izquierda'
@@ -263,17 +267,20 @@ class Jugador(EntidadVisible):
         self.rect.center = self.hitbox.center
 
 class Camara:
-    """Calcula el offset para mantener al jugador en el centro de la pantalla."""
+    """Calcula el desplazamiento (offset) necesario para centrar la pantalla en el jugador.
+    Limita el offset para que la cámara no muestre áreas fuera de los bordes del mapa."""
     def __init__(self, ancho, alto):
         self.x, self.y = 0, 0
         self.ancho, self.alto = ancho, alto
 
     def actualizar(self, objetivo_rect):
+        """Actualiza las coordenadas de la cámara para seguir al rectángulo objetivo dentro de los límites del mapa."""
         self.x = max(0, min(objetivo_rect.centerx - self.ancho // 2, ANCHO_MAPA - self.ancho))
         self.y = max(0, min(objetivo_rect.centery - self.alto // 2, ALTO_MAPA - self.alto))
 
 class Granja:
-    """Gestiona el terreno, arado, riego y crecimiento de cultivos."""
+    """Gestiona la lógica del terreno agrícola: arado, riego recursivo, siembra, cosecha y renderizado de cultivos.
+    Almacena el estado de cada tile del mapa en diccionarios para saber si está arado, regado o cultivado."""
     def __init__(self, tile_pasto, sprites_arados):
         self.tile = tile_pasto
         self.sprites_arados = sprites_arados
@@ -284,39 +291,44 @@ class Granja:
         self.terreno_regado = set()
 
     def get_tile_info(self, mouse_pos, cam_x, cam_y):
-        """Convierte una coordenada de pantalla a coordenada del grid de la granja."""
+        """Convierte la posición del cursor en pantalla a las coordenadas de columna y fila del grid de la granja.
+        Devuelve también el rectángulo del tile en coordenadas del mundo para cálculos de colisión."""
         col = int((mouse_pos[0] + cam_x) // self.tile_w)
         fila = int((mouse_pos[1] + cam_y) // self.tile_h)
         return pygame.Rect(col * self.tile_w, fila * self.tile_h, self.tile_w, self.tile_h), col, fila
 
     def es_arable(self, mouse_pos, cam_x, cam_y, jugador_rect, objetos):
+        """Determina si el tile apuntado puede ser arado, verificando que no esté ya arado, que el jugador esté cerca y que no haya obstáculos.
+        Devuelve True solo si se cumplen todas las condiciones."""
         tile_rect, col, fila = self.get_tile_info(mouse_pos, cam_x, cam_y)
         if (col, fila) in self.terreno_arado: return False
         if not tile_rect.colliderect(jugador_rect.inflate(self.tile_w * 1.5, self.tile_h * 1.5)): return False
         return not any(tile_rect.colliderect(obj.rect) for obj in objetos)
 
     def intentar_arar(self, mouse_pos, cam_x, cam_y, jugador_rect, objetos):
+        """Ejecuta la acción de arar si el tile es válido, asignándole un sprite de tierra aleatorio."""
         if self.es_arable(mouse_pos, cam_x, cam_y, jugador_rect, objetos):
             _, col, fila = self.get_tile_info(mouse_pos, cam_x, cam_y)
             self.terreno_arado[(col, fila)] = random.choice(self.sprites_arados)
 
     def es_plantable(self, mouse_pos, cam_x, cam_y, jugador_rect, inventario, slot_semilla):
+        """Verifica si se puede plantar en el tile: debe estar arado, libre de cultivo, el jugador cerca y tener semillas.
+        Devuelve True solo si todas las condiciones se cumplen."""
         tile_rect, col, fila = self.get_tile_info(mouse_pos, cam_x, cam_y)
         if (col, fila) not in self.terreno_arado or (col, fila) in self.cultivos: return False
         if inventario.cantidades.get(slot_semilla, 0) <= 0: return False
         return tile_rect.colliderect(jugador_rect.inflate(self.tile_w * 1.5, self.tile_h * 1.5))
 
     def intentar_plantar(self, mouse_pos, cam_x, cam_y, jugador_rect, fases_sprite, tipo, sprite_item, inventario, slot_semilla):
+        """Planta una semilla en el tile apuntado si es válido, registrando el cultivo y restando una semilla del inventario."""
         if self.es_plantable(mouse_pos, cam_x, cam_y, jugador_rect, inventario, slot_semilla):
             _, col, fila = self.get_tile_info(mouse_pos, cam_x, cam_y)
             self.cultivos[(col, fila)] = {"fases": fases_sprite, "etapa": 0, "tipo": tipo, "item": sprite_item}
             inventario.gastar_semilla(slot_semilla)
 
     def regar_area_recursiva(self, col, fila, visitados=None):
-        """
-        [MÉTODO RECURSIVO]
-        Se llama a sí mismo para regar toda la tierra arada adyacente conectada.
-        """
+        """Riega el tile actual y se llama a sí misma sobre los cuatro tiles adyacentes para propagar el riego en área.
+        Usa un conjunto de visitados para evitar ciclos infinitos y no volver a regar tiles ya procesados."""
         if visitados is None:
             visitados = set()
 
@@ -326,13 +338,13 @@ class Granja:
         visitados.add((col, fila))
         self.terreno_regado.add((col, fila))
 
-        self.regar_area_recursiva(col + 1, fila, visitados) # Derecha
-        self.regar_area_recursiva(col - 1, fila, visitados) # Izquierda
-        self.regar_area_recursiva(col, fila + 1, visitados) # Abajo
-        self.regar_area_recursiva(col, fila - 1, visitados) # Arriba
+        self.regar_area_recursiva(col + 1, fila, visitados)
+        self.regar_area_recursiva(col - 1, fila, visitados)
+        self.regar_area_recursiva(col, fila + 1, visitados)
+        self.regar_area_recursiva(col, fila - 1, visitados)
 
     def intentar_regar(self, mouse_pos, cam_x, cam_y, jugador_rect):
-        """Inicia la acción de riego, la cual desencadena la recursión."""
+        """Inicia el riego en el tile apuntado si el jugador está cerca y el tile está arado, desencadenando la recursión."""
         tile_rect, col, fila = self.get_tile_info(mouse_pos, cam_x, cam_y)
         area_interaccion = jugador_rect.inflate(self.tile_w * 1.5, self.tile_h * 1.5)
         
@@ -340,14 +352,14 @@ class Granja:
             self.regar_area_recursiva(col, fila)
 
     def intentar_usar_hacha(self, mouse_pos, cam_x, cam_y, jugador_rect, inventario):
-        """Con el hacha cosechas las plantas maduras o destruyes terreno arado."""
+        """Cosecha la planta madura del tile apuntado y la añade al inventario, o destruye el terreno arado si no hay cultivo.
+        Solo añade el ítem al inventario si el cultivo alcanzó la etapa final (etapa 3)."""
         tile_rect, col, fila = self.get_tile_info(mouse_pos, cam_x, cam_y)
         area_interaccion = jugador_rect.inflate(self.tile_w * 1.5, self.tile_h * 1.5)
         
         if tile_rect.colliderect(area_interaccion):
             if (col, fila) in self.cultivos:
                 datos = self.cultivos[(col, fila)]
-                # Solo cosecha item real si estaba maduro
                 if datos["etapa"] == 3: 
                     if datos["tipo"] == "elote":
                         inventario.sumar_tienda(5, 1, datos["item"]) 
@@ -360,14 +372,15 @@ class Granja:
                     self.terreno_regado.remove((col, fila))
 
     def avanzar_dia(self):
-        """Progresa la etapa de los cultivos si estaban regados y seca la tierra."""
+        """Hace crecer en una etapa todos los cultivos que estaban regados y luego borra el estado de riego para el nuevo día."""
         for pos, datos in self.cultivos.items():
             if pos in self.terreno_regado and datos["etapa"] < 3:
                 datos["etapa"] += 1 
         self.terreno_regado.clear()
 
     def draw(self, superficie, cam_x, cam_y):
-        """Renderiza todo el mapa base y los cultivos."""
+        """Renderiza únicamente los tiles visibles en pantalla: primero el pasto base, luego la tierra arada, el riego y los cultivos.
+        Limitar el dibujo a los tiles visibles evita recorrer todo el mapa en cada frame."""
         col_inicio = int(cam_x // self.tile_w)
         col_fin = int((cam_x + ANCHO_PANTALLA) // self.tile_w) + 1
         fila_inicio = int(cam_y // self.tile_h)
@@ -389,7 +402,8 @@ class Granja:
                     superficie.blit(datos["fases"][datos["etapa"]], (x, y))
 
     def draw_hover(self, superficie, mouse_pos, cam_x, cam_y, jugador_rect, objetos, inventario, accion="arar"):
-        """Dibuja un rectángulo selector si la acción es permitida."""
+        """Dibuja un rectángulo resaltado sobre el tile apuntado si la acción seleccionada es válida en ese tile.
+        El color cambia según la herramienta: azul para riego y rojo para las demás."""
         dibujar = False
         tile_rect, col, fila = self.get_tile_info(mouse_pos, cam_x, cam_y)
         area_interaccion = jugador_rect.inflate(self.tile_w * 1.5, self.tile_h * 1.5)
@@ -411,7 +425,8 @@ class Granja:
             pygame.draw.rect(superficie, (255, 0, 0) if accion != "regar" else (0, 100, 255), rect_dibujo, 3)
 
 class Inventario:
-    """Maneja los items que el jugador porta actualmente."""
+    """Administra los slots del inventario del jugador, incluyendo herramientas, semillas y cosechas.
+    Controla las cantidades de ítems consumibles y actualiza el sprite visible en cada slot."""
     def __init__(self, imagen):
         ancho_deseado = 600
         escala = ancho_deseado / imagen.get_width()
@@ -424,14 +439,15 @@ class Inventario:
         self.fuente_cant = pygame.font.Font(None, 24)
 
     def set_item(self, indice_slot, sprite, cantidad=0):
-        """Asigna un ítem manualmente a un slot."""
+        """Coloca un sprite en el slot indicado y, si aplica, inicializa su cantidad."""
         if 0 <= indice_slot < len(self.slots):
             self.slots[indice_slot] = sprite
             if indice_slot in self.cantidades:
                 self.cantidades[indice_slot] = cantidad
 
     def sumar_tienda(self, indice_slot, cantidad, sprite_default):
-        """Actualiza la cantidad de ítems del jugador desde la tienda."""
+        """Modifica la cantidad de un ítem del inventario en la cantidad indicada y actualiza el sprite si es necesario.
+        Si la cantidad llega a cero, borra el sprite del slot para indicar que está vacío."""
         if indice_slot in self.cantidades:
             self.cantidades[indice_slot] += cantidad
             if self.cantidades[indice_slot] > 0 and self.slots[indice_slot] is None:
@@ -441,14 +457,15 @@ class Inventario:
                 self.slots[indice_slot] = None
 
     def gastar_semilla(self, indice_slot):
-        """Resta una semilla del inventario. Si llega a 0, la borra."""
+        """Resta una unidad del slot de semilla especificado y limpia el slot si se agota el stock."""
         if indice_slot in self.cantidades and self.cantidades[indice_slot] > 0:
             self.cantidades[indice_slot] -= 1
             if self.cantidades[indice_slot] <= 0:
                 self.slots[indice_slot] = None 
 
     def draw(self, superficie):
-        """Dibuja el inventario en la parte inferior de la pantalla."""
+        """Dibuja la barra de inventario en la parte inferior de la pantalla con los sprites de cada slot y sus cantidades.
+        Resalta con una sombra circular el slot actualmente seleccionado por el jugador."""
         superficie.blit(self.image, self.rect)
         margen_x_inicial = 20  
         margen_y_inicial = 55  
@@ -473,10 +490,10 @@ class Inventario:
                     texto_cant = str(self.cantidades[i])
                     dibujar_texto_con_borde(superficie, self.fuente_cant, texto_cant, (x + 45, y + 45), (255, 255, 255), (0, 0, 0))
 
-# ==========================================
-# FUNCIÓN PRINCIPAL
-# ==========================================
+
 def main():
+    """Función principal que inicializa pygame, carga todos los recursos y ejecuta el loop del juego.
+    Orquesta la creación de todas las instancias, el manejo de eventos, la lógica de actualización y el renderizado cada frame."""
     pygame.init()
     pantalla = pygame.display.set_mode((ANCHO_PANTALLA, ALTO_PANTALLA))
     pygame.display.set_caption("Moonvale - Versión Final OOP & Recursión")
@@ -521,9 +538,6 @@ def main():
 
     sprites_tierra = [extraer_sprite_exacto(hoja_tierra, c, f, 1, 1, ESCALA) for c, f in [(1,1), (2,1), (3,1), (1,2), (2,2), (3,2)]]
     
-    # ----------------------------------------------------
-    # DICCIONARIO DE DECORACIONES Y MAPA "BOSQUE FRONDOSO"
-    # ----------------------------------------------------
     sprites = {
         'A': extraer_sprite_exacto(hoja_objs, 2, 1, 2, 2, ESCALA),        
         'B': extraer_sprite_exacto(hoja_objs, 4, 1, 2, 2, ESCALA),      
@@ -538,9 +552,7 @@ def main():
         'K': extraer_sprite_exacto(hoja_objs, 9, 5, 1, 1, ESCALA),        
     }
 
-    # Marco lateral denso, zona de casa rodeada y centro libre
     layout = [
-        # Borde Izquierdo
         ('A', 0, 0), ('B', 2, 0), ('D', 4, 0), ('A', 1, 2), ('H', 3, 2), ('B', 0, 4), 
         ('J', 2, 4), ('A', 4, 4), ('A', 1, 6), ('D', 3, 6), ('B', 0, 8), ('H', 2, 8), 
         ('A', 4, 8), ('A', 1, 10), ('J', 3, 10), ('B', 0, 12), ('D', 2, 12), ('A', 4, 12), 
@@ -549,7 +561,6 @@ def main():
         ('B', 0, 24), ('D', 2, 24), ('A', 4, 24), ('A', 1, 26), ('H', 3, 26), ('B', 0, 28), 
         ('J', 2, 28), ('A', 4, 28), ('A', 1, 30), ('D', 3, 30),
 
-        # Borde Derecho
         ('A', 27, 0), ('B', 29, 0), ('D', 31, 0), ('A', 28, 2), ('H', 30, 2), ('B', 27, 4), 
         ('J', 29, 4), ('A', 31, 4), ('A', 28, 6), ('D', 30, 6), ('B', 27, 8), ('H', 29, 8), 
         ('A', 31, 8), ('A', 28, 10), ('J', 30, 10), ('B', 27, 12), ('D', 29, 12), ('A', 31, 12), 
@@ -558,12 +569,10 @@ def main():
         ('B', 27, 24), ('D', 29, 24), ('A', 31, 24), ('A', 28, 26), ('H', 30, 26), ('B', 27, 28), 
         ('J', 29, 28), ('A', 31, 28), ('A', 28, 30), ('D', 30, 30),
 
-        # Alrededor de la casa (Arriba al centro)
         ('A', 6, 0), ('B', 8, 1), ('A', 10, 0), ('D', 12, 1), ('A', 18, 0), ('B', 20, 1), 
         ('H', 22, 0), ('A', 24, 1), ('A', 26, 0), ('B', 7, 2), ('J', 9, 3), ('A', 11, 2), 
         ('A', 19, 3), ('D', 21, 2), ('A', 23, 3), ('B', 25, 2),
 
-        # Borde Inferior
         ('A', 6, 30), ('B', 9, 29), ('J', 12, 30), ('A', 15, 29), ('D', 18, 30), ('B', 21, 29), ('A', 24, 30)
     ]
 
@@ -571,6 +580,7 @@ def main():
     
     cerca_w, cerca_h = hoja_cercas.get_width() // 4, hoja_cercas.get_height() // 2
     def ext_cerca(c, f):
+        """Recorta y escala un segmento de la hoja de cercas al tamaño de un tile."""
         s = pygame.Surface((cerca_w, cerca_h), pygame.SRCALPHA)
         s.blit(hoja_cercas, (0, 0), pygame.Rect((c-1)*cerca_w, (f-1)*cerca_h, cerca_w, cerca_h))
         return pygame.transform.scale(s.subsurface((0,0,cerca_w,cerca_h//2)), (TAM_TILE, int(TAM_TILE*1)))
@@ -639,9 +649,6 @@ def main():
     while True:
         dt = reloj.tick(FPS) / 1000.0
         
-        # ==========================================
-        # CONDICIÓN DE VICTORIA (Rúbrica)
-        # ==========================================
         if estado_juego.monedas >= META_MONEDAS_VICTORIA:
             pantalla.fill((0, 0, 0))
             dibujar_texto_con_borde(
@@ -661,9 +668,6 @@ def main():
                     sys.exit()
             continue
 
-        # ==========================================
-        # CONDICIÓN DE DERROTA (YOU DIED)
-        # ==========================================
         elif estado_juego.dia_actual >= DIA_LIMITE_DERROTA:
             pantalla.fill((0, 0, 0))
             texto_muerte = fuente_muerte.render("YOU DIED", True, (200, 0, 0))
@@ -785,7 +789,6 @@ def main():
             if accion_hover != "ninguna":
                 granja.draw_hover(pantalla, mouse_pos, camara.x, camara.y, jugador.hitbox, objetos, inventario, accion=accion_hover)
 
-        # Interfaz general
         dibujar_texto_con_borde(pantalla, fuente_dia, f"Dia: {estado_juego.dia_actual}/{DIA_LIMITE_DERROTA}", (20, 20), (255, 255, 255), (0, 0, 0))
         dibujar_texto_con_borde(pantalla, fuente_dia, f"Monedas: {estado_juego.monedas}/{META_MONEDAS_VICTORIA}", (20, 70), (255, 215, 0), (0, 0, 0))
 
