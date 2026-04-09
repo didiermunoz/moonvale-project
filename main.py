@@ -48,6 +48,10 @@ DIR_IZQUIERDA = 1
 DIR_DERECHA = 2
 DIR_ARRIBA = 3
 
+HERRAMIENTA_HACHA = "hacha"
+HERRAMIENTA_AZADA = "azada"
+HERRAMIENTA_REGADERA = "regadera"
+
 # --- CONFIGURACIÓN MAPA ---
 TILE_ANCHO = 64
 TILE_ALTO = 64
@@ -110,7 +114,12 @@ class Semilla(Item):
 
 class Parcela:
     def __init__(self, color_base, color_regado):
+        self.labrada = False
         self.regada = False
+
+    def arar(self):
+        self.labrada = True
+
     def regar(self):
         self.regada = True
 
@@ -123,8 +132,42 @@ class Granja:
         
         self.tile_base = obtiene_tile(hoja_tiles, 0, 0, TILE_ANCHO, TILE_ALTO)
         self.tile_regado = obtiene_tile(hoja_tiles, 1, 0, TILE_ANCHO, TILE_ALTO)
+        self.tile_labrado = self.tile_base.copy()
+        tinte_labrado = pygame.Surface((TILE_ANCHO, TILE_ALTO), pygame.SRCALPHA)
+        tinte_labrado.fill((148, 99, 58, 120))
+        self.tile_labrado.blit(tinte_labrado, (0, 0))
 
         self.matriz = [[Parcela(PASTEL_SKY_BLUE,DARK_GRAY_UI) for _ in range(alto)] for _ in range(ancho)]
+
+    def posicion_a_parcela(self, mundo_x, mundo_y):
+        parcela_x = int(mundo_x // TILE_ANCHO)
+        parcela_y = int(mundo_y // TILE_ALTO)
+        if parcela_x < 0 or parcela_x >= self.ancho or parcela_y < 0 or parcela_y >= self.alto:
+            return None
+        return parcela_x, parcela_y
+
+    def arar_parcela(self, parcela_x, parcela_y):
+        if parcela_x < 0 or parcela_x >= self.ancho or parcela_y < 0 or parcela_y >= self.alto:
+            return False
+
+        parcela = self.matriz[parcela_x][parcela_y]
+        if parcela.labrada:
+            return False
+
+        parcela.arar()
+        parcela.regada = False
+        return True
+
+    def regar_parcela(self, parcela_x, parcela_y):
+        if parcela_x < 0 or parcela_x >= self.ancho or parcela_y < 0 or parcela_y >= self.alto:
+            return False
+
+        parcela = self.matriz[parcela_x][parcela_y]
+        if not parcela.labrada or parcela.regada:
+            return False
+
+        parcela.regar()
+        return True
         
     def regar_en_cadena(self, x, y, nivel_carga):
         if x < 0 or x >= self.ancho or y < 0 or y >= self.alto or nivel_carga <= 0: return
@@ -155,7 +198,9 @@ class Granja:
         # 2) Parcelas regadas: solo dentro de la granja lógica.
         for x in range(self.ancho):
             for y in range(self.alto):
-                if not self.matriz[x][y].regada:
+                parcela = self.matriz[x][y]
+
+                if not parcela.labrada and not parcela.regada:
                     continue
 
                 draw_x = x * TILE_ANCHO - cam_x
@@ -166,7 +211,10 @@ class Granja:
                 if draw_y <= -TILE_ALTO or draw_y >= CAMARA_VISTA_ALTO:
                     continue
 
-                superficie.blit(self.tile_regado, (draw_x, draw_y))
+                if parcela.regada:
+                    superficie.blit(self.tile_regado, (draw_x, draw_y))
+                elif parcela.labrada:
+                    superficie.blit(self.tile_labrado, (draw_x, draw_y))
 
 
 class Camara:
@@ -390,6 +438,21 @@ class Jugador:
     def draw(self, superficie, cam_x, cam_y):
         superficie.blit(self.image, (self.x - cam_x, self.y - cam_y))
 
+    def obtener_punto_frontal(self, distancia=TILE_ANCHO // 2):
+        punto_x = self.x + (SPRITE_ANCHO_JUEGO / 2)
+        punto_y = self.y + (SPRITE_ALTO_JUEGO * 0.72)
+
+        if self.direction == 'up':
+            punto_y -= distancia
+        elif self.direction == 'down':
+            punto_y += distancia
+        elif self.direction == 'left':
+            punto_x -= distancia
+        elif self.direction == 'right':
+            punto_x += distancia
+
+        return int(punto_x), int(punto_y)
+
 # ==========================================
 # 5. CICLO PRINCIPAL
 # ==========================================
@@ -434,6 +497,10 @@ def main():
 
     jugador = Jugador(ancho_mundo // 2, alto_mundo // 2, ancho_mundo, alto_mundo)
     camara = Camara(ancho_mundo, alto_mundo)
+
+    herramienta_actual = HERRAMIENTA_HACHA
+    mensaje_accion = "Herramienta lista"
+    tiempo_mensaje = 0
     
     corriendo = True
     while corriendo:
@@ -442,6 +509,46 @@ def main():
                 corriendo = False
             
             if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_1:
+                    herramienta_actual = HERRAMIENTA_HACHA
+                    mensaje_accion = "Herramienta activa: Hacha"
+                    tiempo_mensaje = 180
+                elif evento.key == pygame.K_2:
+                    herramienta_actual = HERRAMIENTA_AZADA
+                    mensaje_accion = "Herramienta activa: Azada"
+                    tiempo_mensaje = 180
+                elif evento.key == pygame.K_3:
+                    herramienta_actual = HERRAMIENTA_REGADERA
+                    mensaje_accion = "Herramienta activa: Regadera"
+                    tiempo_mensaje = 180
+
+                if evento.key == pygame.K_e:
+                    punto_frontal = jugador.obtener_punto_frontal()
+                    accion_exitosa = False
+
+                    if herramienta_actual == HERRAMIENTA_HACHA:
+                        for arbol in arboles[:]:
+                            if arbol.get_collision_rect().collidepoint(punto_frontal):
+                                arboles.remove(arbol)
+                                accion_exitosa = True
+                                break
+
+                        mensaje_accion = "Arbol talado" if accion_exitosa else "No hay arbol al frente"
+
+                    elif herramienta_actual == HERRAMIENTA_AZADA:
+                        parcela_objetivo = granja.posicion_a_parcela(*punto_frontal)
+                        if parcela_objetivo:
+                            accion_exitosa = granja.arar_parcela(parcela_objetivo[0], parcela_objetivo[1])
+                        mensaje_accion = "Tierra labrada" if accion_exitosa else "No se puede labrar ahi"
+
+                    elif herramienta_actual == HERRAMIENTA_REGADERA:
+                        parcela_objetivo = granja.posicion_a_parcela(*punto_frontal)
+                        if parcela_objetivo:
+                            accion_exitosa = granja.regar_parcela(parcela_objetivo[0], parcela_objetivo[1])
+                        mensaje_accion = "Tierra regada" if accion_exitosa else "Primero labra la tierra"
+
+                    tiempo_mensaje = 180
+
                 if evento.key == pygame.K_SPACE:
                     print("\n--- Iniciando DEMO de Riego Recursivo ---")
                     granja.regar_en_cadena(5, 5, 4)
@@ -469,8 +576,14 @@ def main():
 
         pygame.draw.rect(pantalla, DARK_GRAY_UI, (0, ALTO_JUEGO, ANCHO_PANTALLA, ALTO_UI))
         fuente = pygame.font.SysFont("Arial", 22)
-        texto = fuente.render("Área de Inventario (WASD mover, ESPACIO demo Recursividad)", True, (200, 200, 200))
-        pantalla.blit(texto, (20, ALTO_JUEGO + 40))
+        texto_controles = "WASD mover | 1 Hacha | 2 Azada | 3 Regadera | E usar"
+        texto_herramienta = f"Herramienta actual: {herramienta_actual.upper()}"
+        pantalla.blit(fuente.render(texto_controles, True, (200, 200, 200)), (20, ALTO_JUEGO + 20))
+        pantalla.blit(fuente.render(texto_herramienta, True, (240, 240, 160)), (20, ALTO_JUEGO + 50))
+
+        if tiempo_mensaje > 0:
+            pantalla.blit(fuente.render(mensaje_accion, True, (170, 255, 170)), (420, ALTO_JUEGO + 50))
+            tiempo_mensaje -= 1
 
         pygame.display.flip()
         reloj.tick(FPS)
