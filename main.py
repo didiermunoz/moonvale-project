@@ -2,7 +2,7 @@ import pygame
 import sys
 import os
 import random
-import math
+import numpy as np
 
 # ==========================================
 # CONFIGURACIÓN Y CONSTANTES
@@ -206,7 +206,7 @@ class Vaca(EntidadVisible):
         """Dibuja a la vaca y su icono flotante de tienda."""
         super().draw(superficie, cam_x, cam_y)
         if self.icono_carrito is not None:
-            desfase_y = int(math.sin(self.t_flotacion) * 3)
+            desfase_y = int(np.sin(self.t_flotacion) * 3)
             icono_x = self.rect.centerx - (self.icono_carrito.get_width() // 2)
             superficie.blit(self.icono_carrito, (icono_x - cam_x, self.rect.y - self.icono_carrito.get_height() - 1 + desfase_y - cam_y))
 
