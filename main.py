@@ -44,6 +44,33 @@ def asset_path(*rutas):
     dir_actual = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(dir_actual, "Assets", *rutas)
 
+def cargar_imagen_variantes(*rutas_relativas):
+    """Carga la primera imagen existente entre varias rutas candidatas."""
+    ultima_ruta = None
+    for ruta in rutas_relativas:
+        if isinstance(ruta, (list, tuple)):
+            path = asset_path(*ruta)
+        else:
+            path = asset_path(ruta)
+        ultima_ruta = path
+        if os.path.isfile(path):
+            return pygame.image.load(path).convert_alpha()
+    raise FileNotFoundError(f"No se encontro ninguna ruta valida. Ultima ruta probada: {ultima_ruta}")
+
+def cargar_musica_variantes(*rutas_relativas):
+    """Carga la primera pista de musica existente entre varias rutas candidatas."""
+    ultima_ruta = None
+    for ruta in rutas_relativas:
+        if isinstance(ruta, (list, tuple)):
+            path = asset_path(*ruta)
+        else:
+            path = asset_path(ruta)
+        ultima_ruta = path
+        if os.path.isfile(path):
+            pygame.mixer.music.load(path)
+            return
+    raise FileNotFoundError(f"No se encontro pista de musica. Ultima ruta probada: {ultima_ruta}")
+
 def extraer_sprite_exacto(hoja, col, fila, ancho_tiles, alto_tiles, escala):
     """Recorta una región específica de una hoja de sprites usando coordenadas de tile y la escala al tamaño deseado.
     Permite reutilizar una sola imagen con múltiples sprites en lugar de tener archivos separados."""
@@ -526,10 +553,14 @@ def main():
         fuente_tienda_titulo = pygame.font.Font(ruta_fuente, 36)
         fuente_tienda = pygame.font.Font(ruta_fuente, 24)
        
-        img_inventario = pygame.image.load(asset_path(base, "Objects", "Inventory_Light_example_with_slots.png")).convert_alpha()
+        img_inventario = cargar_imagen_variantes(
+            (base, "Objects", "Inventory_Light_example_with_slots.png"),
+            (base, "Objects", "inventory_Light_example_with_slots.png"),
+            (base, "Objects", "Inventory_Light_example_with_slots_2.png"),
+        )
         hoja_herramientas = pygame.image.load(asset_path(base, "Objects", "Basic tools and meterials.png")).convert_alpha()
-        
-        pygame.mixer.music.load(asset_path("audio.mpeg"))
+
+        cargar_musica_variantes("audio.mpeg", "Cloud_Country.mp3")
         pygame.mixer.music.set_volume(VOLUMEN_MUSICA)
         pygame.mixer.music.play(-1)
     except Exception as e:
@@ -771,6 +802,9 @@ def main():
             
         camara.actualizar(jugador.rect)
 
+        cerca_de_vaca = any(jugador.hitbox.colliderect(vaca.hitbox.inflate(70, 70)) for vaca in vacas)
+        cerca_de_puerta = jugador.hitbox.colliderect(zona_interaccion_puerta)
+
         granja.draw(pantalla, camara.x, camara.y)
 
         entidades = objetos + vacas + [jugador]
@@ -792,6 +826,16 @@ def main():
         dibujar_texto_con_borde(pantalla, fuente_dia, f"Dia: {estado_juego.dia_actual}/{DIA_LIMITE_DERROTA}", (20, 20), (255, 255, 255), (0, 0, 0))
         dibujar_texto_con_borde(pantalla, fuente_dia, f"Monedas: {estado_juego.monedas}/{META_MONEDAS_VICTORIA}", (20, 70), (255, 215, 0), (0, 0, 0))
 
+        mensaje_interaccion = None
+        color_interaccion = (255, 255, 255)
+        if not tienda_abierta and transicion_dia_restante == 0:
+            if cerca_de_vaca:
+                mensaje_interaccion = "Presiona E para abrir la tienda"
+                color_interaccion = (255, 245, 190)
+            elif cerca_de_puerta:
+                mensaje_interaccion = "Presiona E para dormir"
+                color_interaccion = (180, 230, 255)
+
         if transicion_dia_restante > 0:
             overlay = pygame.Surface((ANCHO_PANTALLA, ALTO_PANTALLA))
             overlay.fill((0, 0, 0))
@@ -809,6 +853,16 @@ def main():
 
         if not tienda_abierta and transicion_dia_restante == 0:
             inventario.draw(pantalla)
+
+            if mensaje_interaccion:
+                texto_preview = fuente_dia.render(mensaje_interaccion, True, color_interaccion)
+                prompt_x = (ANCHO_PANTALLA - texto_preview.get_width()) // 2
+                prompt_y = max(110, inventario.rect.top - 42)
+                dibujar_texto_con_borde(
+                    pantalla, fuente_dia, mensaje_interaccion,
+                    (prompt_x, prompt_y),
+                    color_interaccion, (0, 0, 0)
+                )
             
         pygame.display.flip()
 
