@@ -4,8 +4,8 @@ import os
 import random
 import numpy as np
 
-ANCHO_PANTALLA = 800
-ALTO_PANTALLA = 600
+ANCHO_PANTALLA = 1200
+ALTO_PANTALLA = 900
 FPS = 60
 
 ESCALA = 4  
@@ -22,20 +22,19 @@ VELOCIDAD_ANIMACION_VACA = 0.05
 ESCALA_CASA = 2.5
 DURACION_TRANSICION_DIA = 1.0
 ESCALA_VACA = 4
-ESCALA_ICONO_CARRITO = 5
 ESCALA_SEMILLA_MENU = 5
 TAM_ICONO_VENTA = 28
 
 META_MONEDAS_VICTORIA = 500
 DIA_LIMITE_DERROTA = 10
-VOLUMEN_MUSICA = 0.35 
+VOLUMEN_MUSICA = 0.5 
 
 PRECIO_COMPRA_SEMILLA_1 = 15
-PRECIO_COMPRA_SEMILLA_2 = 22
+PRECIO_COMPRA_SEMILLA_2 = 20
 PRECIO_VENTA_SEMILLA_1 = 9
 PRECIO_VENTA_SEMILLA_2 = 13
-PRECIO_VENTA_PLANTA_1 = 24
-PRECIO_VENTA_PLANTA_2 = 31
+PRECIO_VENTA_PLANTA_1 = 25
+PRECIO_VENTA_PLANTA_2 = 35
 
 
 def asset_path(*rutas):
@@ -571,40 +570,34 @@ def main():
     
     sprites = {
         'A': extraer_sprite_exacto(hoja_objs, 2, 1, 2, 2, ESCALA),        
-        'B': extraer_sprite_exacto(hoja_objs, 4, 1, 2, 2, ESCALA),      
-        'C': extraer_sprite_exacto(hoja_objs, 2, 3, 2, 2, ESCALA),            
-        'D': extraer_sprite_exacto(hoja_objs, 9, 3, 1, 2, ESCALA),            
-        'E': extraer_sprite_exacto(hoja_objs, 6, 4, 1, 1, ESCALA),    
-        'F': extraer_sprite_exacto(hoja_objs, 7, 4, 1, 1, ESCALA),        
-        'G': extraer_sprite_exacto(hoja_objs, 7, 2, 1, 1, ESCALA),    
-        'H': extraer_sprite_exacto(hoja_objs, 8, 2, 1, 1, ESCALA),    
-        'I': extraer_sprite_exacto(hoja_objs, 9, 2, 1, 1, ESCALA),      
-        'J': extraer_sprite_exacto(hoja_objs, 7, 3, 1, 1, ESCALA),      
-        'K': extraer_sprite_exacto(hoja_objs, 9, 5, 1, 1, ESCALA),        
+        'B': extraer_sprite_exacto(hoja_objs, 4, 1, 2, 2, ESCALA),            
+        'C': extraer_sprite_exacto(hoja_objs, 9, 3, 1, 2, ESCALA),    
+        'D': extraer_sprite_exacto(hoja_objs, 8, 2, 1, 1, ESCALA),      
+        'E': extraer_sprite_exacto(hoja_objs, 7, 3, 1, 1, ESCALA),        
     }
 
     layout = [
-        ('A', 0, 0), ('B', 2, 0), ('D', 4, 0), ('A', 1, 2), ('H', 3, 2), ('B', 0, 4), 
-        ('J', 2, 4), ('A', 4, 4), ('A', 1, 6), ('D', 3, 6), ('B', 0, 8), ('H', 2, 8), 
-        ('A', 4, 8), ('A', 1, 10), ('J', 3, 10), ('B', 0, 12), ('D', 2, 12), ('A', 4, 12), 
-        ('A', 1, 14), ('H', 3, 14), ('B', 0, 16), ('J', 2, 16), ('A', 4, 16), ('A', 1, 18), 
-        ('D', 3, 18), ('B', 0, 20), ('H', 2, 20), ('A', 4, 20), ('A', 1, 22), ('J', 3, 22), 
-        ('B', 0, 24), ('D', 2, 24), ('A', 4, 24), ('A', 1, 26), ('H', 3, 26), ('B', 0, 28), 
-        ('J', 2, 28), ('A', 4, 28), ('A', 1, 30), ('D', 3, 30),
+        ('A', 0, 0), ('B', 2, 0), ('C', 4, 0), ('A', 1, 2), ('D', 3, 2), ('B', 0, 4), 
+        ('E', 2, 4), ('A', 4, 4), ('A', 1, 6), ('C', 3, 6), ('B', 0, 8), ('D', 2, 8), 
+        ('A', 4, 8), ('A', 1, 10), ('E', 3, 10), ('B', 0, 12), ('C', 2, 12), ('A', 4, 12), 
+        ('A', 1, 14), ('D', 3, 14), ('B', 0, 16), ('E', 2, 16), ('A', 4, 16), ('A', 1, 18), 
+        ('C', 3, 18), ('B', 0, 20), ('D', 2, 20), ('A', 4, 20), ('A', 1, 22), ('E', 3, 22), 
+        ('B', 0, 24), ('C', 2, 24), ('A', 4, 24), ('A', 1, 26), ('D', 3, 26), ('B', 0, 28), 
+        ('E', 2, 28), ('A', 4, 28), ('A', 1, 30), ('C', 3, 30),
 
-        ('A', 27, 0), ('B', 29, 0), ('D', 31, 0), ('A', 28, 2), ('H', 30, 2), ('B', 27, 4), 
-        ('J', 29, 4), ('A', 31, 4), ('A', 28, 6), ('D', 30, 6), ('B', 27, 8), ('H', 29, 8), 
-        ('A', 31, 8), ('A', 28, 10), ('J', 30, 10), ('B', 27, 12), ('D', 29, 12), ('A', 31, 12), 
-        ('A', 28, 14), ('H', 30, 14), ('B', 27, 16), ('J', 29, 16), ('A', 31, 16), ('A', 28, 18), 
-        ('D', 30, 18), ('B', 27, 20), ('H', 29, 20), ('A', 31, 20), ('A', 28, 22), ('J', 30, 22), 
-        ('B', 27, 24), ('D', 29, 24), ('A', 31, 24), ('A', 28, 26), ('H', 30, 26), ('B', 27, 28), 
-        ('J', 29, 28), ('A', 31, 28), ('A', 28, 30), ('D', 30, 30),
+        ('A', 27, 0), ('B', 29, 0), ('C', 31, 0), ('A', 28, 2), ('D', 30, 2), ('B', 27, 4), 
+        ('E', 29, 4), ('A', 31, 4), ('A', 28, 6), ('C', 30, 6), ('B', 27, 8), ('D', 29, 8), 
+        ('A', 31, 8), ('A', 28, 10), ('E', 30, 10), ('B', 27, 12), ('C', 29, 12), ('A', 31, 12), 
+        ('A', 28, 14), ('D', 30, 14), ('B', 27, 16), ('E', 29, 16), ('A', 31, 16), ('A', 28, 18), 
+        ('C', 30, 18), ('B', 27, 20), ('D', 29, 20), ('A', 31, 20), ('A', 28, 22), ('E', 30, 22), 
+        ('B', 27, 24), ('C', 29, 24), ('A', 31, 24), ('A', 28, 26), ('D', 30, 26), ('B', 27, 28), 
+        ('E', 29, 28), ('A', 31, 28), ('A', 28, 30), ('C', 30, 30),
 
-        ('A', 6, 0), ('B', 8, 1), ('A', 10, 0), ('D', 12, 1), ('A', 18, 0), ('B', 20, 1), 
-        ('H', 22, 0), ('A', 24, 1), ('A', 26, 0), ('B', 7, 2), ('J', 9, 3), ('A', 11, 2), 
-        ('A', 19, 3), ('D', 21, 2), ('A', 23, 3), ('B', 25, 2),
+        ('A', 6, 0), ('B', 8, 1), ('A', 10, 0), ('C', 12, 1), ('A', 18, 0), ('B', 20, 1), 
+        ('D', 22, 0), ('A', 24, 1), ('A', 26, 0), ('B', 7, 2), ('E', 9, 3), ('A', 11, 2), 
+        ('A', 19, 3), ('C', 21, 2), ('A', 23, 3), ('B', 25, 2),
 
-        ('A', 6, 30), ('B', 9, 29), ('J', 12, 30), ('A', 15, 29), ('D', 18, 30), ('B', 21, 29), ('A', 24, 30)
+        ('A', 6, 30), ('B', 9, 29), ('E', 12, 30), ('A', 15, 29), ('C', 18, 30), ('B', 21, 29), ('A', 24, 30)
     ]
 
     tile_pasto = extraer_sprite_exacto(hoja_pasto, 1, 6, 1, 1, ESCALA)
@@ -656,7 +649,6 @@ def main():
     inventario.set_item(1, sprite_hacha)
     inventario.set_item(2, sprite_regadera)
     inventario.set_item(3, sprite_semilla_elote, cantidad=5)
-    inventario.set_item(4, sprite_semilla_tomate, cantidad=5)
 
     objetos = [Obstaculo(c*TAM_TILE, f*TAM_TILE, sprites[t]) for t, c, f in layout]
     casa_x, casa_y = (ANCHO_MAPA // 2) - (casa_superior.get_width() // 2), 0
